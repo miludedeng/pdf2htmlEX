@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+# Run ffmpeg in a container
+#
+
+
+set -e
+declare INPUT
+declare OUTPUT
+declare INPUT_DIR
+declare OUTPUT_DIR
+declare INPUT_FILENAME
+declare OUTPUT_FILENAME
+
+TAG="latest"
+IMAGE="bwits/pdf2htmlex:$TAG"
+PDF2HTMLEX_OPTIONS="pdf2htmlEX"
+
+FROM_DIR="/opt/from/"
+TO_DIR="/opt/to/"
+
+
+# Setup options for connecting to docker host
+if [ -z "$DOCKER_HOST" ]; then
+    DOCKER_HOST="/var/run/docker.sock"
+fi
+if [ -S "$DOCKER_HOST" ]; then
+    DOCKER_ADDR="-v $DOCKER_HOST:$DOCKER_HOST -e DOCKER_HOST"
+else
+    DOCKER_ADDR="-e DOCKER_HOST -e DOCKER_TLS_VERIFY -e DOCKER_CERT_PATH"
+fi
+
+# Only allocate tty if we detect one
+if [ -t 1 ]; then
+    DOCKER_RUN_OPTIONS="-t"
+fi
+if [ -t 0 ]; then
+    DOCKER_RUN_OPTIONS="$DOCKER_RUN_OPTIONS -i"
+fi
+
+
+args=$#
+INPUT=${!args}
+if [ "echo $INPUT | grep /" == "" ];then
+	OUTPUT_DIR=""
+else
+	INPUT_DIR=${INPUT%/*}
+	if [[ "$INPUT_DIR" != /* ]]; then
+		INPUT_DIR=$(cd $INPUT_DIR; pwd)
+	fi
+fi
+INPUT_FILENAME=${INPUT##*/}
+until [ $# -eq 0 ]
+do
+	if [ "$1" == "--dest-dir" ]; then
+		OUTPUT=$2
+		if [ "echo $OUTPUT | grep /" == "" ];then
+			OUTPUT_DIR=""
+		else
+			OUTPUT_DIR=${OUTPUT%/*}
+			if [[ "$OUTPUT_DIR" != /* ]]; then
+				OUTPUT_DIR=$(cd $OUTPUT_DIR; pwd)
+			fi
+		fi
+		OUTPUT_FILENAME=${OUTPUT##*/} 
+		PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" "$1" $TO_DIR$OUTPUT_FILENAME"
+		shift;
+	else
+		if [ "$2" == "" ];then
+			PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" $FROM_DIR$INPUT_FILENAME"
+		else
+			PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" "$1
+		fi
+	fi
+	shift;
+done
+
+if [ "" == "$INPUT_DIR" ];then
+	INPUT_DIR=$(pwd)
+fi
+if [ "" == "$OUTPUT_DIR" ];then
+	OUTPUT_DIR=$(pwd)
+fi
+
+echo "docker run --rm $DOCKER_RUN_OPTIONS $DOCKER_ADDR -v $INPUT_DIR:$FROM_DIR -v $OUTPUT_DIR:$TO_DIR -w $FROM_DIR $IMAGE $PDF2HTMLEX_OPTIONS"
+exec docker run --rm $DOCKER_RUN_OPTIONS $DOCKER_ADDR -v $INPUT_DIR:$FROM_DIR -v $OUTPUT_DIR:$TO_DIR -w $FROM_DIR $IMAGE $PDF2HTMLEX_OPTIONS
