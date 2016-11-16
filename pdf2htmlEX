@@ -40,6 +40,11 @@ fi
 
 
 args=$#
+OUTPUT_FILENAME=""
+if [[ ${!args} != *".pdf" ]]; then
+    OUTPUT_FILENAME=${!args}
+    args=$[args-1]
+fi
 INPUT=${!args}
 if [ "echo $INPUT | grep /" == "" ];then
 	OUTPUT_DIR=""
@@ -75,6 +80,10 @@ do
 	shift;
 done
 
+if [ -n $OUTPUT_FILENAME ]; then
+	PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" "$OUTPUT_FILENAME
+fi
+
 if [ "" == "$INPUT_DIR" ];then
 	INPUT_DIR=$(pwd)
 fi
@@ -82,5 +91,6 @@ if [ "" == "$OUTPUT_DIR" ];then
 	OUTPUT_DIR=$(pwd)
 fi
 
-echo "docker run --rm $DOCKER_RUN_OPTIONS $DOCKER_ADDR -v $INPUT_DIR:$FROM_DIR -v $OUTPUT_DIR:$TO_DIR -w $FROM_DIR $IMAGE $PDF2HTMLEX_OPTIONS"
-exec docker run --rm $DOCKER_RUN_OPTIONS $DOCKER_ADDR -v $INPUT_DIR:$FROM_DIR -v $OUTPUT_DIR:$TO_DIR -w $FROM_DIR $IMAGE $PDF2HTMLEX_OPTIONS
+echo "docker run --rm $DOCKER_RUN_OPTIONS $DOCKER_ADDR -v $INPUT_DIR:$FROM_DIR -v $OUTPUT_DIR:$TO_DIR -v /web/pdf2html/share/pdf2htmlEX:/usr/share/pdf2htmlEX -w $FROM_DIR $IMAGE $PDF2HTMLEX_OPTIONS"
+exec docker run --rm $DOCKER_RUN_OPTIONS $DOCKER_ADDR -v $INPUT_DIR:$FROM_DIR -v $OUTPUT_DIR:$TO_DIR -v /web/pdf2html/share/pdf2htmlEX:/usr/share/pdf2htmlEX -w $FROM_DIR $IMAGE $PDF2HTMLEX_OPTIONS
+
