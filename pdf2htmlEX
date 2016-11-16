@@ -13,7 +13,7 @@ declare INPUT_FILENAME
 declare OUTPUT_FILENAME
 
 TAG="latest"
-IMAGE="bwits/pdf2htmlex:$TAG"
+IMAGE="bwits/pdf2htmlex-alpine:$TAG"
 PDF2HTMLEX_OPTIONS="pdf2htmlEX"
 
 FROM_DIR="/opt/from/"
@@ -40,9 +40,9 @@ fi
 
 
 args=$#
-OUTPUT_FILENAME=""
-if [[ ${!args} != *".pdf" ]]; then
-    OUTPUT_FILENAME=${!args}
+OUT_FILENAME=""
+if [[ ${!args} == *".html" ]]; then
+    OUT_FILENAME=${!args}
     args=$[args-1]
 fi
 INPUT=${!args}
@@ -57,31 +57,37 @@ fi
 INPUT_FILENAME=${INPUT##*/}
 until [ $# -eq 0 ]
 do
-	if [ "$1" == "--dest-dir" ]; then
-		OUTPUT=$2
-		if [ "echo $OUTPUT | grep /" == "" ];then
-			OUTPUT_DIR=""
-		else
-			OUTPUT_DIR=${OUTPUT%/*}
-			if [[ "$OUTPUT_DIR" != /* ]]; then
-				OUTPUT_DIR=$(cd $OUTPUT_DIR; pwd)
+	if [[ $1 != *".html" ]]; then
+		if [ "$1" == "--dest-dir" ]; then
+			OUTPUT=$2
+			if [ "echo $OUTPUT | grep /" == "" ];then
+				OUTPUT_DIR=""
+			else
+				OUTPUT_DIR=${OUTPUT%/*}
+				if [[ "$OUTPUT_DIR" != /* ]]; then
+					OUTPUT_DIR=$(cd $OUTPUT_DIR; pwd)
+				fi
 			fi
-		fi
-		OUTPUT_FILENAME=${OUTPUT##*/} 
-		PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" "$1" $TO_DIR$OUTPUT_FILENAME"
-		shift;
-	else
-		if [ "$2" == "" ];then
-			PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" $FROM_DIR$INPUT_FILENAME"
+			OUTPUT_FILENAME=${OUTPUT##*/} 
+			PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" "$1" $TO_DIR$OUTPUT_FILENAME"
+			shift;
 		else
-			PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" "$1
+			if [ "$2" == "" ];then
+				PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" $FROM_DIR$INPUT_FILENAME"
+			else
+				if [[ $2 == *".html" ]]; then
+					PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" $FROM_DIR$INPUT_FILENAME"
+				else 
+					PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" "$1
+				fi
+			fi
 		fi
 	fi
 	shift;
 done
 
-if [ -n $OUTPUT_FILENAME ]; then
-	PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" "$OUTPUT_FILENAME
+if [ -n $OUT_FILENAME ]; then
+	PDF2HTMLEX_OPTIONS=$PDF2HTMLEX_OPTIONS" "$OUT_FILENAME
 fi
 
 if [ "" == "$INPUT_DIR" ];then
